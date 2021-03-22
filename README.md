@@ -2,13 +2,13 @@
 OpenVHook is a standalone script hook for Grand Theft Auto V and fully open source.
 
 ## Features
-- Compatible with existing asi plugins and Script Hook V's asi loader
+- Compatible .asi loader works with exisitng GTA:V Mods
 - Ability to create standalone mods/scripts
 - Drop in replacement for Script Hook V
 
 ## Requirements
 - Grand Theft Auto Five
-- An Asi loader
+- A Dll injector, I recommend using dinput8.dll with is included with ScriptHookV
 
 ## Building
 ### Requirements
@@ -17,12 +17,10 @@ OpenVHook is a standalone script hook for Grand Theft Auto V and fully open sour
 
 ## Bug Reporting
 Report bugs under [Github Issues](https://github.com/212antt/OpenVHook/issues)
-Make sure to include **OpenVHook.log** and if reporting an incompatiblity please also include the log file for that mods as well.
+Make sure to include **OpenVHook.log** and if reporting an incompatiblity please also include the log file for that mod as well.
 
 
 ## Credits
-[M0rtale](https://github.com/M0rtale) I adapted OpenVHook's DirectX Hooking functionality from his [Universal DirectX 11 Hook](https://github.com/M0rtale/Universal-D3D11-Hook)
-
 [CamxxCore](https://github.com/CamxxCore), [E66666666](https://github.com/E66666666), [ivanmeler](https://github.com/ivanmeler), [DKingCN](https://github.com/DKingCN), [JackD111](https://github.com/JackD111), [AteshM](https://github.com/AteshM), [yulon](https://github.com/yulon), [Stricted](https://github.com/Stricted) For all of there contributions towards the project. 
 
 [NTAuthority/citizenMP](http://tohjo.eu/citidev/citizenmp) Most of the code is from them. I only changed it up here and there and added my own improvements.
