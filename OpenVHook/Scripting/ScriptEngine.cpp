@@ -2,6 +2,12 @@
 #include "..\Utility\Pattern.h"
 #include "Versioning.h"
 #include "Hooking.h"
+#include "..\Utility\Log.h"
+#include "..\DirectXHook\DirectXHook.h"
+
+#include <iostream>
+#include <string>
+
 
 using namespace Utility;
 using namespace hooking;
@@ -25,13 +31,13 @@ CPools pools;
 #pragma pack(4)		// _unknown 4 bytes
 // https://www.unknowncheats.me/forum/grand-theft-auto-v/144028-reversal-thread-81.html#post1931323
 struct NativeRegistration {
-    uint64_t nextRegBase;
-    uint64_t nextRegKey;
-    ScriptEngine::NativeHandler handlers[7];
-    uint32_t numEntries1;
-    uint32_t numEntries2;
-    uint32_t _unknown;
-    uint64_t hashes[7];
+	uint64_t nextRegBase;
+	uint64_t nextRegKey;
+	ScriptEngine::NativeHandler handlers[7];
+	uint32_t numEntries1;
+	uint32_t numEntries2;
+	uint32_t _unknown;
+	uint64_t hashes[7];
 
 	/*
 		// decryption
@@ -47,30 +53,30 @@ struct NativeRegistration {
 		the first two members of struct are named as Base/Key respectively in that sense.
 	*/
 	inline NativeRegistration* getNextRegistration() {
-		uint32_t key = (uint32_t)(reinterpret_cast<uint64_t>(this) ^ nextRegKey);
-		return reinterpret_cast<NativeRegistration*>(nextRegBase ^ (((uint64_t)key) << 32) ^ key);
+		uint32_t key = static_cast<uint32_t>(reinterpret_cast<uint64_t>(this) ^ nextRegKey);
+		return reinterpret_cast<NativeRegistration*>(nextRegBase ^ (static_cast<uint64_t>(key) << 32) ^ key);
 	}
 
 	inline void setNextRegistration(NativeRegistration* nextReg, uint64_t nextKey) {
 		nextRegKey = nextKey;
-		uint32_t key = (uint32_t)(reinterpret_cast<uint64_t>(this) ^ nextRegKey);
-		nextRegBase = reinterpret_cast<uint64_t>(nextReg) ^ (((uint64_t)key) << 32) ^ key;
+		uint32_t key = static_cast<uint32_t>(reinterpret_cast<uint64_t>(this) ^ nextRegKey);
+		nextRegBase = reinterpret_cast<uint64_t>(nextReg) ^ (static_cast<uint64_t>(key) << 32) ^ key;
 	}
 
-    inline uint32_t getNumEntries() {
-        return (uint32_t)((uintptr_t)&numEntries1) ^ numEntries1 ^ numEntries2;
-    }
+	inline uint32_t getNumEntries() {
+		return static_cast<uint32_t>(reinterpret_cast<uint64_t>(&numEntries1)) ^ numEntries1 ^ numEntries2;
+	}
 
-    inline uint64_t getHash(uint32_t index) {
-		uint32_t key = (uint32_t)(reinterpret_cast<uint64_t>(&hashes[2 * index]) ^ hashes[2 * index + 1]);
-		return hashes[2 * index] ^ (((uint64_t)key) << 32) ^ key;
-    }
+	inline uint64_t getHash(uint32_t index) {
+		uint32_t key = static_cast<uint32_t>(reinterpret_cast<uint64_t>(&hashes[2 * index]) ^ hashes[2 * index + 1]);
+		return hashes[2 * index] ^ (static_cast<uint64_t>(key) << 32) ^ key;
+	}
 };
 #pragma pack(pop)
 
 static NativeRegistration ** registrationTable;
 
-static std::unordered_set<ScriptThread*> g_ownedThreads;
+static std::vector<std::pair<ScriptThread*, ScriptThread*>> g_ownedThreads;
 
 static std::unordered_map<uint64_t, ScriptEngine::NativeHandler> foundHashCache;
 
@@ -85,6 +91,13 @@ static std::string GameVersionToString(int version) {
 
 bool ScriptEngine::Initialize() {
 	LOG_PRINT("Initializing ScriptEngine...");
+
+	// init Direct3d hook
+	if (!g_D3DHook.InitializeHooks())
+	{
+		LOG_ERROR("Failed to Initialize Direct3d Hooks");
+		return false;
+	}
 
 	executable_meta executable;
 	executable.EnsureInit();
@@ -154,11 +167,11 @@ bool ScriptEngine::Initialize() {
 	g_scriptHandlerMgr = reinterpret_cast<decltype(g_scriptHandlerMgr)>(location + *(int32_t*)location + 4);
 	LOG_DEBUG("g_scriptHandlerMgr\t 0x%p (0x%.8X)", g_scriptHandlerMgr, reinterpret_cast<uintptr_t>(g_scriptHandlerMgr) - executable.begin());
 
-    // vector3 pointer fix
-    if (auto void_location = pattern("83 79 18 ? 48 8B D1 74 4A FF 4A 18").count(1).get(0).get<void>())
-    {
-        scrNativeCallContext::SetVectorResults = (void(*)(scrNativeCallContext*))(void_location);
-    }
+	// vector3 pointer fix
+	if (auto void_location = pattern("83 79 18 ? 48 8B D1 74 4A FF 4A 18").count(1).get(0).get<void>())
+	{
+		scrNativeCallContext::SetVectorResults = (void(*)(scrNativeCallContext*))(void_location);
+	}
 
 	//script_location
 	auto getScriptIdBlock = pattern("80 78 32 00 75 34 B1 01 E8");
@@ -169,13 +182,6 @@ bool ScriptEngine::Initialize() {
 		LOG_ERROR("Unable to find getScriptIdBlock");
 		return false;
 	}
-
-	// ERR_SYS_PURE
-	static uint8_t block[2] = { 0xEB };
-	unsigned long OldProtection;
-	VirtualProtect(script_location, 2, PAGE_EXECUTE_READWRITE, &OldProtection);
-	memcpy(&block, script_location, 2);
-	VirtualProtect(script_location, 2, OldProtection, NULL);
 
 	auto gameStatePattern =	pattern("83 3D ? ? ? ? ? 8A D9 74 0A");
 
@@ -278,14 +284,57 @@ void ScriptEngine::CreateThread( ScriptThread * thread ) {
 	( *scrThreadCount )++;
 	( *scrThreadId )++;
 
+	ScriptThread* orig_thread = collection->at(slot);
 	collection->set( slot, thread );
 
-	g_ownedThreads.insert( thread );
+	g_ownedThreads.push_back({ thread, orig_thread });
 
 	LOG_DEBUG( "Created thread, id %d", thread->GetId() );
 }
 
+void ScriptEngine::RemoveAllThreads()
+{
+	std::reverse(g_ownedThreads.begin(), g_ownedThreads.end());
+	auto collection = GetThreadCollection();
+	int index = 0;
+	for (auto slot : * collection) {
+		for (auto& [th, orig_th]: g_ownedThreads) {
+			if (slot == th) {
+				collection->set(index, orig_th);
+			}
+		}
+		index++;
+	}
+	g_ownedThreads.clear();
+}
+
+#if _DEBUG
+static int DumpAllNativeHashAndHandlers() {
+	LOG_DEBUG("GameBase: %p. Dumping native hashes => handlers. patience babe.", GetModuleHandle(NULL));
+	int count = 0;
+	FILE* dumpfile = fopen("dumped_natives.log", "w");
+	for (int x = 0; x < 0xFF; x++) {
+		NativeRegistration* table = registrationTable[x];
+		for (; table; table = table->getNextRegistration()) {
+			for (uint32_t i = 0; i < table->getNumEntries(); i++) {
+				auto newHash = table->getHash(i);
+				auto handler = table->handlers[i];
+				fprintf(dumpfile, "%llX => %p\n",newHash, handler);
+				count++;
+			}
+		}
+	}
+	LOG_DEBUG("Dumped %d native hashes and handlers", count);
+	fclose(dumpfile);
+	return count;
+}
+#endif
+
 ScriptEngine::NativeHandler ScriptEngine::GetNativeHandler( uint64_t oldHash ) {
+
+#if _DEBUG && 0
+	static int dumped_native_count = DumpAllNativeHashAndHandlers();
+#endif
 
 	auto cachePair = foundHashCache.find(oldHash);
 	if (cachePair != foundHashCache.end()) {
@@ -323,14 +372,25 @@ uint64_t ScriptEngine::GetNewHashFromOldHash( uint64_t oldHash ) {
 		return oldHash;
 	}
 
-	// optimized
+	// Algorithm Explained
+
+	// natives.h uses constant oldHashes to represent functions. One oldHash is expected to be mapped to the same function in all game versions.
+	// In order to use the same oldHash in all version of games, where hash of the same function changed from version to version,
+	// Alexander Blade maintains a hashmap that stores a complete 2-D hash list version by version.
+
+	// The oldHash is expected to be the oldest hash of a function, but in reality it may not exist at hashVer=0 or until latest, or may be even not the actual oldest hash.
+	// That is why we need to search from the hashVer=0 to the latest.
+	// Once we found the first occurrence of oldHash (of function Fn_i), we should locate the Fn_i line that stores hashes of different hashVers,
+	// then search all the way down to the exact hashVersion of the running game.
+
+	// optimized implementation
 	// scan row by row at column 0. If nothing found, try column 1, etc
 	// if firstly found old hash at (i,j), get the non-zero hash at (i, x) where x->searchDepth(as close as possible) && j<x<=searchDepth
 	for (int i = 0; i < fullHashMapCount; i++) {
 		for (int j = 0; j <= searchDepth; j++) {
 			if (fullHashMap[i][j] == oldHash) {
 				// found
-				for(int k = searchDepth; k > j; k--) {		// reverse search. sooner for latest hash
+				for(int k = searchDepth; k > j; k--) {		// search from latest hash to oldest hash. faster for the most cases
 					uint64_t newHash = fullHashMap[i][k];
 					if (newHash == 0)
 						continue;

@@ -5,13 +5,16 @@
 
 typedef struct KeyState
 {
-	int lastUpTime;
+	ULONGLONG lastUpTime;
 	BOOL isWithAlt;
 	BOOL wasDownBefore;
 	BOOL isUpNow;
 } KeyState_t;
 
+typedef void(*TWndProcFn)(UINT, WPARAM, LPARAM);
+
 extern KeyState				keyboardState[];
+extern std::set<TWndProcFn>	g_WndProcCb;
 
 namespace InputHook {
 
