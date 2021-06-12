@@ -4,9 +4,6 @@
     <ClCompile Include="Input\InputHook.cpp">
       <Filter>Input</Filter>
     </ClCompile>
-    <ClCompile Include="ASI Loader\ASILoader.cpp">
-      <Filter>ASI Loader</Filter>
-    </ClCompile>
     <ClCompile Include="OpenVHook.cpp" />
     <ClCompile Include="Scripting\ScriptThread.cpp">
       <Filter>Scripting\Script Thread</Filter>
@@ -41,34 +38,16 @@
     <ClCompile Include="Scripting\Pools.cpp">
       <Filter>Scripting\Pools</Filter>
     </ClCompile>
-    <ClCompile Include="Scripting\Hook.cpp">
-      <Filter>Scripting\DirectX Hook</Filter>
+    <ClCompile Include="DirectXHook\DirectXHook.cpp">
+      <Filter>DirectXHook</Filter>
     </ClCompile>
-    <ClCompile Include="DirectXTK\Src\CommonStates.cpp">
-      <Filter>DirectXTK</Filter>
-    </ClCompile>
-    <ClCompile Include="DirectXTK\Src\WICTextureLoader.cpp">
-      <Filter>DirectXTK</Filter>
-    </ClCompile>
-    <ClCompile Include="DirectXTK\Src\SpriteBatch.cpp">
-      <Filter>DirectXTK</Filter>
-    </ClCompile>
-    <ClCompile Include="DirectXTK\Src\SimpleMath.cpp">
-      <Filter>DirectXTK</Filter>
-    </ClCompile>
-    <ClCompile Include="DirectXTK\Src\VertexTypes.cpp">
-      <Filter>DirectXTK</Filter>
-    </ClCompile>
-    <ClCompile Include="DirectXTK\Src\BufferHelpers.cpp">
-      <Filter>DirectXTK</Filter>
+    <ClCompile Include="Scripting\NativeHashMap.cpp">
+      <Filter>Scripting\Native Invoker</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Input">
       <UniqueIdentifier>{e8950c58-a34c-458d-91df-a5429763f86f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ASI Loader">
-      <UniqueIdentifier>{0abb8b11-95af-4e5c-a947-4bb29115b7b7}</UniqueIdentifier>
     </Filter>
     <Filter Include="Utility">
       <UniqueIdentifier>{9d373d22-c87f-4e58-ac62-d07dd39a620d}</UniqueIdentifier>
@@ -112,20 +91,14 @@
     <Filter Include="Scripting\Pools">
       <UniqueIdentifier>{35981836-3de3-4b64-82c5-daa0cc5cfd2d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Scripting\DirectX Hook">
-      <UniqueIdentifier>{85c9348d-c852-4a34-bfe1-6694d42445fa}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="DirectXTK">
-      <UniqueIdentifier>{767df8f2-ae02-45de-b5fc-b34ab10fda85}</UniqueIdentifier>
+    <Filter Include="DirectXHook">
+      <UniqueIdentifier>{8572bffb-790e-4b6e-9ab0-a5469b1e4a01}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="OpenVHook.h" />
     <ClInclude Include="Input\InputHook.h">
       <Filter>Input</Filter>
-    </ClInclude>
-    <ClInclude Include="ASI Loader\ASILoader.h">
-      <Filter>ASI Loader</Filter>
     </ClInclude>
     <ClInclude Include="Scripting\pgCollection.h">
       <Filter>Scripting</Filter>
@@ -135,9 +108,6 @@
     </ClInclude>
     <ClInclude Include="Scripting\ScriptEngine.h">
       <Filter>Scripting\Script Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Scripting\NativeHashMap.h">
-      <Filter>Scripting</Filter>
     </ClInclude>
     <ClInclude Include="Scripting\NativeInvoker.h">
       <Filter>Scripting\Native Invoker</Filter>
@@ -181,30 +151,13 @@
     <ClInclude Include="Scripting\Pools.h">
       <Filter>Scripting\Pools</Filter>
     </ClInclude>
-    <ClInclude Include="Scripting\Hook.h">
-      <Filter>Scripting\DirectX Hook</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectXTK\Inc\WICTextureLoader.h">
-      <Filter>DirectXTK</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectXTK\Inc\SpriteBatch.h">
-      <Filter>DirectXTK</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectXTK\Inc\CommonStates.h">
-      <Filter>DirectXTK</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectXTK\Inc\SimpleMath.h">
-      <Filter>DirectXTK</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectXTK\Inc\VertexTypes.h">
-      <Filter>DirectXTK</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectXTK\Inc\BufferHelpers.h">
-      <Filter>DirectXTK</Filter>
+    <ClInclude Include="DirectXHook\DirectXHook.h">
+      <Filter>DirectXHook</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\README.md" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="LICENSE-ntauthority.txt" />

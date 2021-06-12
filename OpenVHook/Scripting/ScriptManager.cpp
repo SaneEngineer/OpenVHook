@@ -6,15 +6,10 @@
 #include "SpriteBatch.h"
 #include "..\Utility\Log.h"
 #include "..\Utility\General.h"
-#include "..\ASI Loader\ASILoader.h"
+#include "..\DirectXHook\DirectXHook.h"
+#include "..\Utility\PEImage.h"
 #include "Types.h"
-#include <stdio.h>
-#include <cstdlib>
-#include <iterator> 
-#include <chrono>
-#include <map> 
-#include <wrl\wrappers\corewrappers.h>
-#include <wrl\client.h>
+#include "..\Input\InputHook.h"
 
 using namespace Utility;
 using namespace DirectX;
@@ -76,11 +71,15 @@ void Script::Tick() {
 	else if (ScriptEngine::GetGameState() == GameStatePlaying) {
 
 		scriptFiber = CreateFiber(NULL, [](LPVOID handler) {
+			const char* script_name = "";
 			__try {
-				LOG_PRINT("Launching script %s", reinterpret_cast<Script*>(handler)->name.c_str());
+				script_name = reinterpret_cast<Script*>(handler)->name.c_str();
+				LOG_PRINT("Launching script %s", script_name);
 				reinterpret_cast<Script*>( handler )->Run();
-			} __except (ExceptionHandler(GetExceptionCode(), GetExceptionInformation())) {
-				LOG_ERROR("Error in script->Run");
+			} __except (EXCEPTION_EXECUTE_HANDLER) {
+				// here we can not easily break & debug.
+				// check dump at C:\Users\<UserName>\AppData\Local\CrashDumps\GTA5.exe.<PID>.dmp
+				LOG_ERROR("Error in script->Run %s", script_name);
 			}
 		}, this );
 	}
@@ -133,57 +132,109 @@ eThreadState ScriptManagerThread::Reset( uint32_t scriptHash, void * pArgs, uint
 	return ScriptThread::Reset( scriptHash, pArgs, argCount );
 }
 
-bool ScriptManagerThread::LoadScripts() {
+size_t ScriptManagerThread::LoadScripts() {
+	
+	assert(m_scripts.empty());
+	
+	LOG_PRINT( "Loading *.asi plugins" );
 
-	if (!m_scripts.empty()) return false;
+	const std::string currentFolder = GetRunningExecutableFolder();
 
-	// load known scripts
-	for (auto && scriptName : m_scriptNames)
-	{
-		LOG_PRINT("Loading \"%s\"", scriptName.c_str());
-		HMODULE module = LoadLibraryA(scriptName.c_str());
-		if (module) {
-			LOG_PRINT("\tLoaded \"%s\" => 0x%p", scriptName.c_str(), module);
-		} else {
-			LOG_DEBUG("\tSkip \"%s\"", scriptName.c_str());
+	const auto loadPlugins = [&]( const std::string& asiFolder ) {
+
+		const std::string asiSearchQuery = asiFolder + "\\*.asi";
+
+		WIN32_FIND_DATAA fileData;
+		HANDLE fileHandle = FindFirstFileA( asiSearchQuery.c_str(), &fileData );
+		if ( fileHandle != INVALID_HANDLE_VALUE ) {
+
+			do {
+
+				const std::string pluginPath = asiFolder + "\\" + fileData.cFileName;
+
+				LOG_PRINT( "Loading \"%s\"", pluginPath.c_str() );
+
+				PEImage pluginImage;
+				if ( !pluginImage.Load( pluginPath ) ) {
+
+					LOG_ERROR( "\tFailed to load image" );
+					continue;
+				}
+
+				if (std::find(m_scriptNames.begin(), m_scriptNames.end(), fileData.cFileName) != m_scriptNames.end()) {
+					LOG_DEBUG("\tSkip \"%s\"", fileData.cFileName);
+					continue;
+				}
+
+				HMODULE module = LoadLibraryA( pluginPath.c_str() );
+				if ( module ) {
+					LOG_PRINT( "\tLoaded \"%s\" => 0x%p", fileData.cFileName, module );
+				} else {
+					DWORD errorMessageID = ::GetLastError();
+					if ( errorMessageID == 0 )
+						LOG_ERROR( "\tFailed to load" );
+
+					LPSTR messageBuffer = nullptr;
+					size_t size = FormatMessageA( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+												  NULL, errorMessageID, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), ( LPSTR )&messageBuffer, 0, NULL );
+
+					std::string message( messageBuffer, size );
+
+					//Free the buffer.
+					LocalFree( messageBuffer );
+					LOG_ERROR( "\tFailed to load: %s", message.c_str() );
+				}
+
+			} while ( FindNextFileA( fileHandle, &fileData ) );
+
+			FindClose( fileHandle );
 		}
-	}
+	};
 
-	// ASILoader::Initialize only load new DLLs if called multiple times.
-	ASILoader::Initialize();
+	loadPlugins( currentFolder );
 
-	return true;
+	loadPlugins( currentFolder + "\\asi" );
+
+	LOG_PRINT( "Finished loading *.asi plugins" );
+
+	assert(m_scripts.size() == m_scriptNames.size());
+
+	return m_scripts.size();
 }
 
 void ScriptManagerThread::FreeScripts() {
-
-	scriptMap tempScripts;
-
-	for (auto && pair : m_scripts) {
-		tempScripts[pair.first] = pair.second;
-	}
+	
+	scriptMap tempScripts {m_scripts};
 
 	for (auto && pair : tempScripts) {
 		FreeLibrary( pair.first );
 	}
 
 	m_scripts.clear();
+	m_scriptNames.clear();
+}
+
+size_t ScriptManagerThread::Count()
+{
+	return m_scriptNames.size();
 }
 
 void ScriptManagerThread::AddScript( HMODULE module, void( *fn )( ) ) {
+	
+	std::unique_lock<std::mutex> lock(mutex); 
 
 	const std::string moduleName = GetModuleFullName( module );
 	const std::string shortName = GetFilename(moduleName);
 
 	if (m_scripts.find( module ) == m_scripts.end())	
-		LOG_PRINT("Registering script '%s' (0x%p)", shortName.c_str(), fn);
+		LOG_PRINT("Registering script '%s' (0x%p!0x%p)", shortName.c_str(), module, fn);
 	else 
-		LOG_PRINT("Registering additional script thread '%s' (0x%p)", shortName.c_str(), fn);
+		LOG_PRINT("Registering additional script thread '%s' (0x%p!0x%p)", shortName.c_str(), module, fn);
 
 	if ( find(m_scriptNames.begin(), m_scriptNames.end(), 
-		moduleName ) == m_scriptNames.end() )
+		shortName ) == m_scriptNames.end() )
 	{
-		m_scriptNames.push_back( moduleName );
+		m_scriptNames.push_back( shortName );
 	}
 
 	m_scripts[module].push_back(std::make_shared<Script>( fn, shortName ));
@@ -228,9 +279,9 @@ void DLL_EXPORT scriptRegister( HMODULE module, void( *function )( ) ) {
 	g_ScriptManagerThread.AddScript( module, function );
 }
 
-void DLL_EXPORT scriptRegisterAdditionalThread(HMODULE module, void(*function)()) {
+void DLL_EXPORT scriptRegisterAdditionalThread(HMODULE module, void(*LP_SCRIPT_MAIN)()) {
 
-	g_ScriptManagerThread.AddScript(module, function);
+	g_ScriptManagerThread.AddScript(module, LP_SCRIPT_MAIN);
 }
 
 void DLL_EXPORT scriptUnregister( void( *function )( ) ) {
@@ -262,7 +313,17 @@ void DLL_EXPORT nativePush64(UINT64 value ) {
 	g_context.Push( value );
 }
 
-DLL_EXPORT uint64_t * nativeCall() {
+#if _DEBUG
+uint64_t* nativeCallWithLog()
+{
+	// copy args, which will be overwritten by result
+	auto args = new uint64_t[g_context.GetArgumentCount()];
+	for (int i = 0; i < g_context.GetArgumentCount(); i++)
+	{
+		args[i] = g_context.GetArgument<uint64_t>(i);
+	}
+	bool has_exception = false;
+	uint64_t result = 0;
 
 	auto fn = ScriptEngine::GetNativeHandler( g_hash );
 
@@ -271,10 +332,48 @@ DLL_EXPORT uint64_t * nativeCall() {
 		__try {
 
 			fn( &g_context );
-            scrNativeCallContext::SetVectorResults(&g_context);
+			scrNativeCallContext::SetVectorResults(&g_context);
+			result = g_context.GetResult<uint64_t>();
 		} __except ( EXCEPTION_EXECUTE_HANDLER ) {
+			has_exception = true;
+			// zero result on exception so we can possibly handle it in script
+			g_context.ClearResult();
+		}
+	}
+	
+	char logData[1024]{};
+	int loglen =snprintf(logData, sizeof(logData), "nativeCall: oldHash:0x%016llX, Exception:%d, Result:0x%016llX, Args: ", g_hash, has_exception, result);
+	for (int i = 0; i<g_context.GetArgumentCount(); i++)
+	{
+		int extra_len = snprintf(logData + loglen, sizeof(logData) - loglen, "%llu, ", args[i]);
+		loglen += extra_len;
+	}
+	delete[] args;
+	LOG_FILE(logData);
 
-			LOG_ERROR( "Error in nativeCall" );
+	return reinterpret_cast<uint64_t*>( g_context.GetResultPointer() );
+}
+#endif
+
+DLL_EXPORT uint64_t * nativeCall() {
+
+#if _DEBUG && 0
+	return nativeCallWithLog();
+#endif
+
+	auto fn = ScriptEngine::GetNativeHandler( g_hash );
+
+	if ( fn != 0 ) {
+
+		__try {
+
+			fn( &g_context );
+			scrNativeCallContext::SetVectorResults(&g_context);
+		} __except ( EXCEPTION_EXECUTE_HANDLER ) {
+			LOG_ERROR( "Error in nativeCall: oldHash=>handler(a1, ...): %p=>%p(%x)", g_hash, fn, g_context.GetArgument<uint64_t>(0));
+			
+			// zero result on exception so we can possibly handle it in script
+			g_context.ClearResult();
 		}
 	}
 
@@ -338,9 +437,12 @@ int DLL_EXPORT worldGetAllVehicles(int* array, int arraySize) {
 	{
 		if (i >= arraySize) break;
 
-		if (vehiclePool->m_bitMap[i] >= 0)
+		if (uint64_t addr = vehiclePool->getAddress(i))
 		{
-			array[index++] = (i << 8) + vehiclePool->m_bitMap[i];
+			if (int entity = pools.AddressToEntity(addr))
+			{
+				array[index++] = entity;
+			}
 		}
 	}
 
@@ -356,10 +458,13 @@ int DLL_EXPORT worldGetAllPeds(int* array, int arraySize) {
 	for (auto i = 0; i < pedPool->m_count; i++)
 	{
 		if (i >= arraySize) break;
-
-		if (pedPool->m_bitMap[i] >= 0)
+		
+		if (uint64_t addr = pedPool->getAddress(i))
 		{
-			array[index++] = pedPool->getHandle(i);
+			if (int entity = pools.AddressToEntity(addr))
+			{
+				array[index++] = entity;
+			}
 		}
 	}
 
@@ -375,10 +480,13 @@ int DLL_EXPORT worldGetAllObjects(int* array, int arraySize) {
 	for (auto i = 0; i < objectPool->m_count; i++)
 	{
 		if (i >= arraySize) break;
-
-		if (objectPool->m_bitMap[i] >= 0)
+		
+		if (uint64_t addr = objectPool->getAddress(i))
 		{
-			array[index++] = objectPool->getHandle(i);
+			if (int entity = pools.AddressToEntity(addr))
+			{
+				array[index++] = entity;
+			}
 		}
 	}
 
@@ -394,145 +502,53 @@ int DLL_EXPORT worldGetAllPickups(int* array, int arraySize) {
 	for (auto i = 0; i < pickupPool->m_count; i++)
 	{
 		if (i >= arraySize) break;
-
-		if (pickupPool->m_bitMap[i] >= 0)
+		
+		if (uint64_t addr = pickupPool->getAddress(i))
 		{
-			array[index++] = pickupPool->getHandle(i);
+			if (int entity = pools.AddressToEntity(addr))
+			{
+				array[index++] = entity;
+			}
 		}
 	}
 
 	return index;
 }
 
-void Script::Start()
-{
-	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-	if (FAILED(hr)) {
-		LOG_ERROR("Failure to Intialize COM Libary");
-	}
-
-	D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
-
-	HWND hWindow = FindWindowA(NULL, "Window"); // TODO: Modify this.
-
-#pragma region Initialise DXGI_SWAP_CHAIN_DESC
-	DXGI_SWAP_CHAIN_DESC scd;
-	ZeroMemory(&scd, sizeof(scd));
-
-	scd.BufferCount = 1;
-	scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // sets color formatting, we are using RGBA
-	scd.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-	scd.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-	scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; // says what we are doing with the buffer
-	scd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH; // msdn explains better than i can: https://msdn.microsoft.com/en-us/library/windows/desktop/bb173076(v=vs.85).aspx
-	scd.OutputWindow = hWindow; // our gamewindow, obviously
-	scd.SampleDesc.Count = 1; // Set to 1 to disable multisampling
-	scd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD; // D3D related stuff, cant really describe what it does
-	scd.Windowed = ((GetWindowLongPtr(hWindow, GWL_STYLE) & WS_POPUP) != 0) ? false : true; // check if our game is windowed
-	scd.BufferDesc.Width = 1920; // temporary width
-	scd.BufferDesc.Height = 1080; // temporary height
-	scd.BufferDesc.RefreshRate.Numerator = 144; // refreshrate in Hz
-	scd.BufferDesc.RefreshRate.Denominator = 1; // no clue, lol
-#pragma endregion
-
-	if (FAILED(D3D11CreateDeviceAndSwapChain(
-		NULL, D3D_DRIVER_TYPE_HARDWARE, NULL,
-		NULL, &featureLevel, 1, D3D11_SDK_VERSION,
-		&scd, &Hook::pSwapChain,
-		&Hook::pDevice, NULL, &Hook::pContext
-	)))
-	{// failed to create D3D11 device
-		return;
-	}
-
-	//Get VTable Pointers
-	DWORD_PTR* pSwapChainVT = reinterpret_cast<DWORD_PTR*>(Hook::pSwapChain);
-	DWORD_PTR* pDeviceVT = reinterpret_cast<DWORD_PTR*>(Hook::pDevice); // Device not needed, but prolly need it to draw stuff in Present, so it is included
-	DWORD_PTR* pContextVT = reinterpret_cast<DWORD_PTR*>(Hook::pContext);
-
-	//Pointer->Table
-	pSwapChainVT = reinterpret_cast<DWORD_PTR*>(pSwapChainVT[0]);
-	pDeviceVT = reinterpret_cast<DWORD_PTR*>(pDeviceVT[0]);
-	pContextVT = reinterpret_cast<DWORD_PTR*>(pContextVT[0]);
-
-	Hook::oPresent = reinterpret_cast<tD3D11Present>(pSwapChainVT[8]); // Present Function
-
-	//Hook using Detour
-	Hook::HookFunction(reinterpret_cast<PVOID*>(&Hook::oPresent), Hook::D3D11Present);
-
-}
-
-typedef void(*PresentCallback)(void*);
-
-DLL_EXPORT void presentCallbackRegister(PresentCallback cb) {
-	static bool flag_warn_presentCallbackRegister = true;
-	if (flag_warn_presentCallbackRegister)
-		LOG_WARNING("plugin is trying to use presentCallbackRegister");
-	flag_warn_presentCallbackRegister = false;
-
-	
-}
-
-DLL_EXPORT void presentCallbackUnregister(PresentCallback cb) {
-	static bool flag_warn_presentCallbackUnregister = true;
-	if (flag_warn_presentCallbackUnregister)
-		LOG_WARNING("plugin is trying to use presentCallbackUnregister");
-	flag_warn_presentCallbackUnregister = false;
-}
-
-DLL_EXPORT int createTexture(const char* fileName) {
-
-	//convert fileName to a wchar_t
-	size_t size = strlen(fileName) + 1;
-	size_t convertedChars;
-	wchar_t* temp = new wchar_t[size];
-	mbstowcs_s(&convertedChars, temp, size, fileName, _TRUNCATE);
-
-	//Create texture using WIC
-	HRESULT Status = CreateWICTextureFromFile(pDevice, pContext, temp, resource.GetAddressOf(), m_texture.ReleaseAndGetAddressOf());
-	if (FAILED(Status)) {
-		LOG_ERROR("Failed to create texture");
-	}
-
-	ComPtr<ID3D11Texture2D> texture;
-	DX::ThrowIfFailed(resource.As(&texture));
-
-	CD3D11_TEXTURE2D_DESC textureDesc;
-	texture->GetDesc(&textureDesc);
-
-	if (textureId != 0) {
-		textureId++;
-	}
-	idmap.insert(pair<int, ComPtr<ID3D11ShaderResourceView>>(textureId, m_texture));
-	LOG_PRINT("Creating Texture", fileName, ", id", textureId); 
-
-	return textureId;
+DLL_EXPORT int createTexture(const char* fileName)
+{	
+	return g_D3DHook.CreateTexture(fileName);
 }
 
 DLL_EXPORT void drawTexture(int id, int index, int level, int time,
 	float sizeX, float sizeY, float centerX, float centerY,
 	float posX, float posY, float rotation, float screenHeightScaleFactor,
-	float r, float g, float b, float a) {
-	ComPtr<ID3D11ShaderResourceView> texture = idmap[id];
+	float r, float g, float b, float a)
+{
+	g_D3DHook.DrawTexture(id, index, level, time,
+		sizeX, sizeY, centerX, centerY,
+		posX, posY, rotation, screenHeightScaleFactor,
+		r, g, b, a);
+}
 
-	//setup sprite drawing
-	m_states = std::make_unique<CommonStates>(pDevice);
-	unique_ptr<SpriteBatch> spriteBatch;
-	spriteBatch = std::make_unique<SpriteBatch>(pContext);
+/*Input*/
+DLL_EXPORT void WndProcHandlerRegister(TWndProcFn function) 
+{
+	g_WndProcCb.insert(function);
+}
 
-	unsigned int last_call_time = timeGetTime();
-	bool elapsedtime = false;
+DLL_EXPORT void WndProcHandlerUnregister(TWndProcFn function) 
+{
+	g_WndProcCb.erase(function);
+}
 
-	//Use sprites to draw texture
-	while (elapsedtime == false) {
-		spriteBatch->Begin(SpriteSortMode_Deferred, m_states->NonPremultiplied());
-		spriteBatch->Draw(texture.Get(), XMFLOAT2(posX, posY), nullptr, SimpleMath::Color(r, g, b, a), rotation, XMFLOAT2(centerX, centerY), screenHeightScaleFactor);
-		spriteBatch->End();
-		unsigned int now_time = timeGetTime();
-		if (now_time > (last_call_time + time))
-		{
-			elapsedtime = true;
-			last_call_time = timeGetTime(); //last time is re initialized
-		}
-	}
+/* D3d SwapChain */
+DLL_EXPORT void presentCallbackRegister(PresentCallback cb) 
+{
+	g_D3DHook.AddCallback(cb);
+}
+
+DLL_EXPORT void presentCallbackUnregister(PresentCallback cb) 
+{
+	g_D3DHook.RemoveCallback(cb);
 }

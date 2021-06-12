@@ -1,5 +1,4 @@
 #include "Input\InputHook.h"
-#include "ASI Loader\ASILoader.h"
 #include "Scripting\ScriptEngine.h"
 #include "Scripting\ScriptManager.h"
 #include "Scripting\Hook.h"
@@ -7,34 +6,29 @@
 #include "Utility\General.h"
 #include "Utility\Pattern.h"
 #include "Utility\Thread.h"
+#include "DirectXHook/DirectXHook.h"
 
 using namespace Utility;
 
-static Thread mainThread = Thread([](ThreadState*) {
+static Thread reloadPluginThread = Thread([](ThreadState*) {
 
-	if (GetTickCount() - keyboardState[VK_CONTROL].lastUpTime < 5000 && !keyboardState[VK_CONTROL].isUpNow &&
-		GetTickCount() - keyboardState[0x52].lastUpTime < 100 && keyboardState[0x52].isUpNow)
+	if (GetTickCount64() - keyboardState[VK_CONTROL].lastUpTime < 5000 && !keyboardState[VK_CONTROL].isUpNow &&
+		GetTickCount64() - keyboardState['R'].lastUpTime < 100 && keyboardState['R'].isUpNow)
 	{
 		keyboardState[0x52].lastUpTime = 0;
 
-		if (g_ScriptManagerThread.LoadScripts())
-		{
-			int count = 3;
-			while (count > 0)
-			{
+		if (g_ScriptManagerThread.Count()) {
+			LOG_PRINT("Unloading .asi plugins...");
+			g_ScriptManagerThread.FreeScripts();
+			MessageBeep(0);
+		}
+		else {
+			LOG_PRINT("Reloading .asi plugins...");
+			g_ScriptManagerThread.LoadScripts();
+			for (int i = 0; i < 3; i++) {
 				MessageBeep(0);
 				Sleep(200);
-				--count;
 			}
-		}
-
-		else
-		{
-			LOG_PRINT("Unloading .asi plugins...");
-
-			g_ScriptManagerThread.FreeScripts();
-
-			MessageBeep(0);
 		}
 	}
 });
@@ -62,13 +56,9 @@ static Thread initThread = Thread([](ThreadState* ts) {
 
 	ScriptEngine::CreateThread( &g_ScriptManagerThread );
 
-#ifdef _DEBUG
-	ASILoader::Initialize();
-#endif
-
 	LOG_PRINT( "Initialization finished" );
 
-	mainThread.Run();
+	reloadPluginThread.Run();
 });
 
 void Cleanup() {
@@ -77,31 +67,49 @@ void Cleanup() {
 
 	initThread.Exit();
 
-	mainThread.Exit();
+	reloadPluginThread.Exit();
 
 	InputHook::Remove();
+
+	g_D3DHook.ReleaseDevices(true);
+
+	g_ScriptManagerThread.FreeScripts();
+
+	ScriptEngine::RemoveAllThreads();
 
 	if ( GetConsole()->IsAllocated() ) {
 		GetConsole()->DeAllocate();
 	}
 }
 
-void temp() {
-	Script::Start();
+// OpenVHook is loaded into game process as a dependency,
+// without this function, refcount of OpenVHook will dec to 0 after the last asi plugins being unload.
+// then OpenVHook itself will be unload immediately, which breaks hot-reload
+static void EnsureSelfReference(HINSTANCE hModule) {
+	auto fullpath = GetModuleFullName(hModule);
+	// this increase ref count of OpenVHook
+	static auto g_hmodule_self = LoadLibrary(fullpath.c_str());
+	LOG_PRINT("Kept OpenVHook reference: %p", g_hmodule_self);
+}
+
+static void CancelSelfReference(HINSTANCE hModule) {
+	// dec ref count
+	FreeLibrary(hModule);
 }
 
 BOOL APIENTRY DllMain( HINSTANCE hModule, DWORD dwReason, LPVOID lpvReserved ) {
 
 	switch ( dwReason ) {
 		case DLL_PROCESS_ATTACH: {
-			SetOurModuleHandle(hModule);
+			EnsureSelfReference(hModule);
+			SetOurModuleHandle( hModule );
 			initThread.Run();
 			DisableThreadLibraryCalls(hModule);
 			CreateThread(NULL, NULL, reinterpret_cast<LPTHREAD_START_ROUTINE>(temp), NULL, NULL, NULL);
 			break;
 		}
 		case DLL_PROCESS_DETACH: {
-
+			CancelSelfReference(hModule);
 			Cleanup();
 			break;
 		}
