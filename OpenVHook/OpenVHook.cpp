@@ -97,22 +97,20 @@ static void CancelSelfReference(HINSTANCE hModule) {
 	FreeLibrary(hModule);
 }
 
-BOOL APIENTRY DllMain( HINSTANCE hModule, DWORD dwReason, LPVOID lpvReserved ) {
+BOOL APIENTRY DllMain(HINSTANCE hModule, DWORD dwReason, LPVOID lpvReserved) {
 
-	switch ( dwReason ) {
-		case DLL_PROCESS_ATTACH: {
-			EnsureSelfReference(hModule);
-			SetOurModuleHandle( hModule );
-			initThread.Run();
-			DisableThreadLibraryCalls(hModule);
-			CreateThread(NULL, NULL, reinterpret_cast<LPTHREAD_START_ROUTINE>(temp), NULL, NULL, NULL);
-			break;
-		}
-		case DLL_PROCESS_DETACH: {
-			CancelSelfReference(hModule);
-			Cleanup();
-			break;
-		}
+	switch (dwReason) {
+	case DLL_PROCESS_ATTACH: {
+		EnsureSelfReference(hModule);
+		SetOurModuleHandle(hModule);
+		initThread.Run();
+		break;
+	}
+	case DLL_PROCESS_DETACH: {
+		CancelSelfReference(hModule);
+		Cleanup();
+		break;
+	}
 	}
 
 	return TRUE;

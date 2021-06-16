@@ -1,4 +1,3 @@
-#include "NativeHashMap.h"
 #include "..\Utility\Log.h"
 
 #include <iostream>
@@ -151,10 +150,16 @@ int ScriptEngine::GetGameVersion()
 		return 20;
 	case 0xE80C75D2:
 		return 21;
+	case 0x158B48FF:
+		return 22;
 	case 0x137978C:
 		return 23;
 	case 0xB86AE800:
 		return 24;
+	case 0x158B4800:
+		return 25;
+	case 0x3B830000:
+		return 26;
 	case 0x75C68441:
 		return 27;
 	case 0x828B1C74:
@@ -165,6 +170,12 @@ int ScriptEngine::GetGameVersion()
 		return 30;
 	case 0xB2F4E30D:
 		return 31;
+	case 0x3DCF2715:
+		return 32;
+	case 0x5C0FF300:
+		return 33;
+	case 0x8B4801B0:
+		return 34;
 	case 0x89587500:
 		return 35;
 	case 0xC4834801:
@@ -173,31 +184,76 @@ int ScriptEngine::GetGameVersion()
 		return 37;
 	case 0x83483024:
 		return 38;
-	case 0x2C0EB25:
+	case 0x3B8005:
+		return 39;
+	case 0x248489CF:
 		return 40;
-	case 0x8B484874:	// 1.0.1868.0 STEAM
+	case 0x2C0EB25:
+		return 41;
+	case 0x410102A4:
+		return 42;
+	case 0xD0590FC5:
+		return 43;
+	case 0xA7E2B9:
+		return 44;
+	case 0x8B4C0000:
+		return 45;
+	case 0x280F3465:
+		return 46;
+	case 0xFFFA3468:
+		return 47;
+	case 0x48C48B48:
+		return 48;
+	case 0xE8304789:
+		return 49;
+	case 0x8B480477:
+		return 50;
+	case 0xEBE06529:
+		return 51;
+	case 0xFF30440:
+		return 52;
+	case 0x700F4166:
+		return 53;
+	case 0x8B484874:
 		return 54;
-	case 0xA0C18148:    // 1.0.1868.4 EPIC
+	case 0x88693E8:
+		return 55;
+	case 0xCB8B48D7:
+		return 56;
+	case 0x89480446:
+		return 57;
+	case 0xA0C18148:
 		return 58;
-	case 0x02:			// Steam Placeholder
+	case 0x7738432F:
 		return 59;
-	case 0x0:			// 1.0.2060.0 NONSTEAM
-		return 62;
-	case 59:			// 1.0.2060.1 STEAM Placeholder
+	case 0x3944F98B:
 		return 61;
-	case 60:			// 1.0.2060.1 NONSTEAM
-		return 62;
-	case 61:			// 1.0.2189.0 STEAM Placeholder
+	case 0x126AE900:
 		return 63;
-	case 0xC1000000:	// 1.0.2189.0 NONSTEAM
+	case 0xC1000000:
 		return 64;
-#ifdef _DEBUG
+	case 0x1428D41:
+		return 65;
+	case 0x33450158:
+		return 66;
+	case 0xDE80000:
+		return 67;
+	case 0x448D48CA:
+		return 68;
 	default:
-		return codeSig;
-#else
-	default:
+		if (codeSig == 0) {
+			if (*(DWORD*)((DWORD64)pModule + 0xB00000) == 0x7F58E3E8)
+				return 60;
+			else
+				return 62;
+		}
+		if (codeSig == 0x89605189) {
+			if (*(DWORD*)((DWORD64)pModule + 0x1433B08) == 0x245C8948)
+				return 6;
+			else
+				return 8;
+		}
 		return -1;
-#endif
 	}
 }
 
@@ -281,17 +337,22 @@ int ScriptEngine::GameVersionToSearchDepth(int version)
 		return 20;
 	case 54:
 	case 55:
+	case 56:
+	case 57:
 	case 58:
 		return 21;
 	case 59:
 	case 60:
 	case 61:
 	case 62:
-		return 22;
 	case 63:
+		return 22;
 	case 64:
+	case 65:
+	case 66:
+	case 67:
+	case 68:
 		return 23;
-
 	default:
 		return fullHashMapDepth - 1;
 	}

@@ -207,11 +207,8 @@ bool ScriptEngine::Initialize() {
 	LOG_DEBUG("g_globalPtr\t\t 0x%p (0x%.8X)", globalTable.GlobalBasePtr, reinterpret_cast<uintptr_t>(globalTable.GlobalBasePtr) - executable.begin());
 
 	//gameVersion = GetGameVersion();
-#ifdef _DEBUG
-	LOG_PRINT("Game version #%lu", gameVersion);
-#else
-	LOG_PRINT(("Game version is " + GameVersionToString(gameVersion)).c_str());
-#endif
+	LOG_PRINT("Game version is %s (%d)", GameVersionToString(gameVersion).c_str(), gameVersion);
+
 
 	// Initialize internal pools
 	pools.Initialize();

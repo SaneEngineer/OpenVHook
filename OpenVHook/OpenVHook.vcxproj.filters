@@ -157,7 +157,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\README.md" />
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="LICENSE-ntauthority.txt" />

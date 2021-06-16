@@ -60,7 +60,7 @@ eThreadState ScriptThread::Reset( uint32_t scriptHash, void* pArgs, uint32_t arg
 
 	ScriptThreadInit( this );
 
-	m_pszExitMessage = "Normal exit";
+	m_pszExitMessage = (char*)"Normal exit";
 
 	return m_Context.m_State;
 }
