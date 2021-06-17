@@ -101,6 +101,7 @@ BOOL APIENTRY DllMain(HINSTANCE hModule, DWORD dwReason, LPVOID lpvReserved) {
 
 	switch (dwReason) {
 	case DLL_PROCESS_ATTACH: {
+		DisableThreadLibraryCalls(hModule);
 		EnsureSelfReference(hModule);
 		SetOurModuleHandle(hModule);
 		initThread.Run();

@@ -23,6 +23,7 @@
 
 using namespace DirectX;
 using namespace Microsoft::WRL;
+using namespace Utility;
 
 typedef void(*PresentCallback)(void *);
 typedef HRESULT(WINAPI* Fn_IDXGISwapChain_Present)(IDXGISwapChain* chain, UINT syncInterval, UINT flags);

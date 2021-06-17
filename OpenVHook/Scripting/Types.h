@@ -64,7 +64,7 @@ public:
 	inline uint64_t getAddress(int i)
 	{
 		assert(i >= 0);
-		return mask(i) & (m_poolStartAddress + i * m_itemSize);
+		return mask(i) & (m_poolStartAddress + i * (int64_t)m_itemSize);
 	}
 
 private:
