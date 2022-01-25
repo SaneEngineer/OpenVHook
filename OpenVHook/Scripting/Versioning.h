@@ -240,6 +240,14 @@ int ScriptEngine::GetGameVersion()
 		return 67;
 	case 0x448D48CA:
 		return 68;
+	case 0x1491:
+		return 69;
+	case 0x1490:
+		return 70;
+	case 0x14912:
+		return 71;
+	case 0x14902:
+		return 72;
 	default:
 		if (codeSig == 0) {
 			if (*(DWORD*)((DWORD64)pModule + 0xB00000) == 0x7F58E3E8)
@@ -353,6 +361,13 @@ int ScriptEngine::GameVersionToSearchDepth(int version)
 	case 67:
 	case 68:
 		return 23;
+	case 69:
+	case 70:
+		return 24;
+	case 71:
+	case 72:
+		return 25;
+
 	default:
 		return fullHashMapDepth - 1;
 	}

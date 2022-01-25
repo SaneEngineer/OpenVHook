@@ -154,6 +154,9 @@
     <ClInclude Include="DirectXHook\DirectXHook.h">
       <Filter>DirectXHook</Filter>
     </ClInclude>
+    <ClInclude Include="Scripting\Versioning.h">
+      <Filter>Scripting</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\README.md" />
