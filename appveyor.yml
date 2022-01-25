@@ -3,6 +3,11 @@ platform: x64
 configuration: Debug
 skip_tags: true
 
+install:
+- git submodule init
+- git submodule update
+
+
 init:
   - git config --global core.autocrlf input
 
