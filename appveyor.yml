@@ -1,4 +1,4 @@
-image: Visual Studio 2017
+image: Visual Studio 2022
 platform: x64
 configuration: Debug
 skip_tags: true
@@ -6,6 +6,10 @@ skip_tags: true
 install:
 - git submodule init
 - git submodule update
+
+build:
+  project: OpenVHook/OpenVHook.vcxproj
+  project: OpenVHook/DirectXTK/DirectXTK_Desktop_2022.vcxproj
 
 
 init:
