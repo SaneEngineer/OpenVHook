@@ -48,16 +48,25 @@ build/
 
 # Visual C++ cache files
 ipch/
+.vs/
 *.aps
 *.ncb
 *.opensdf
 *.sdf
 *.cachefile
 
+
 # Visual Studio profiler
 *.psess
 *.vsp
 *.vspx
+
+# NuGet Packages
+*.nupkg
+# The packages folder can be ignored because of Package Restore
+**/packages/*
+# except build/, which is used as an MSBuild target.
+!**/packages/build/
 
 # Guidance Automation Toolkit
 *.gpState

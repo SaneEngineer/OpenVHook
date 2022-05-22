@@ -1,97 +1,96 @@
-#include "NativeHashMap.h"
 #include "..\Utility\Log.h"
 
 #include <iostream>
 #include <string>
 
 static std::vector<std::string> GameVersionString = {
-    "VER_1_0_335_2_STEAM",
-    "VER_1_0_335_2_NOSTEAM",
+	"VER_1_0_335_2_STEAM",
+	"VER_1_0_335_2_NOSTEAM",
 
-    "VER_1_0_350_1_STEAM",
-    "VER_1_0_350_2_NOSTEAM",
+	"VER_1_0_350_1_STEAM",
+	"VER_1_0_350_2_NOSTEAM",
 
-    "VER_1_0_372_2_STEAM",
-    "VER_1_0_372_2_NOSTEAM",
+	"VER_1_0_372_2_STEAM",
+	"VER_1_0_372_2_NOSTEAM",
 
-    "VER_1_0_393_2_STEAM",
-    "VER_1_0_393_2_NOSTEAM",
-    "VER_1_0_393_4_STEAM",
-    "VER_1_0_393_4_NOSTEAM",
+	"VER_1_0_393_2_STEAM",
+	"VER_1_0_393_2_NOSTEAM",
+	"VER_1_0_393_4_STEAM",
+	"VER_1_0_393_4_NOSTEAM",
 
-    "VER_1_0_463_1_STEAM",
-    "VER_1_0_463_1_NOSTEAM",
+	"VER_1_0_463_1_STEAM",
+	"VER_1_0_463_1_NOSTEAM",
 
-    "VER_1_0_505_2_STEAM",
-    "VER_1_0_505_2_NOSTEAM",
+	"VER_1_0_505_2_STEAM",
+	"VER_1_0_505_2_NOSTEAM",
 
-    "VER_1_0_573_1_STEAM",
-    "VER_1_0_573_1_NOSTEAM",
+	"VER_1_0_573_1_STEAM",
+	"VER_1_0_573_1_NOSTEAM",
 
-    "VER_1_0_617_1_STEAM",
-    "VER_1_0_617_1_NOSTEAM",
+	"VER_1_0_617_1_STEAM",
+	"VER_1_0_617_1_NOSTEAM",
 
-    "VER_1_0_678_1_STEAM",
-    "VER_1_0_678_1_NOSTEAM",
+	"VER_1_0_678_1_STEAM",
+	"VER_1_0_678_1_NOSTEAM",
 
-    "VER_1_0_757_2_STEAM",
-    "VER_1_0_757_2_NOSTEAM",
+	"VER_1_0_757_2_STEAM",
+	"VER_1_0_757_2_NOSTEAM",
 
-    "VER_1_0_757_4_STEAM",
-    "VER_1_0_757_4_NOSTEAM",
+	"VER_1_0_757_4_STEAM",
+	"VER_1_0_757_4_NOSTEAM",
 
-    "VER_1_0_791_2_STEAM",
-    "VER_1_0_791_2_NOSTEAM",
+	"VER_1_0_791_2_STEAM",
+	"VER_1_0_791_2_NOSTEAM",
 
-    "VER_1_0_877_1_STEAM",
-    "VER_1_0_877_1_NOSTEAM",
+	"VER_1_0_877_1_STEAM",
+	"VER_1_0_877_1_NOSTEAM",
 
-    "VER_1_0_944_2_STEAM",
-    "VER_1_0_944_2_NOSTEAM",
+	"VER_1_0_944_2_STEAM",
+	"VER_1_0_944_2_NOSTEAM",
 
-    "VER_1_0_1011_1_STEAM",
-    "VER_1_0_1011_1_NOSTEAM",
+	"VER_1_0_1011_1_STEAM",
+	"VER_1_0_1011_1_NOSTEAM",
 
-    "VER_1_0_1032_1_STEAM",
-    "VER_1_0_1032_1_NOSTEAM",
+	"VER_1_0_1032_1_STEAM",
+	"VER_1_0_1032_1_NOSTEAM",
 
-    "VER_1_0_1103_2_STEAM",
-    "VER_1_0_1103_2_NOSTEAM",
+	"VER_1_0_1103_2_STEAM",
+	"VER_1_0_1103_2_NOSTEAM",
 
-    "VER_1_0_1180_2_STEAM",
-    "VER_1_0_1180_2_NOSTEAM",
+	"VER_1_0_1180_2_STEAM",
+	"VER_1_0_1180_2_NOSTEAM",
 
-    "VER_1_0_1290_1_STEAM",
-    "VER_1_0_1290_1_NOSTEAM",
+	"VER_1_0_1290_1_STEAM",
+	"VER_1_0_1290_1_NOSTEAM",
 
-    "VER_1_0_1365_1_STEAM",
-    "VER_1_0_1365_1_NOSTEAM",
+	"VER_1_0_1365_1_STEAM",
+	"VER_1_0_1365_1_NOSTEAM",
 
-    "VER_1_0_1493_0_STEAM",
-    "VER_1_0_1493_0_NOSTEAM",
+	"VER_1_0_1493_0_STEAM",
+	"VER_1_0_1493_0_NOSTEAM",
 
-    "VER_1_0_1493_1_STEAM",
-    "VER_1_0_1493_1_NOSTEAM",
+	"VER_1_0_1493_1_STEAM",
+	"VER_1_0_1493_1_NOSTEAM",
 
-    "VER_1_0_1604_0_STEAM",
-    "VER_1_0_1604_0_NOSTEAM",
+	"VER_1_0_1604_0_STEAM",
+	"VER_1_0_1604_0_NOSTEAM",
 
-    "VER_1_0_1604_1_STEAM",
-    "VER_1_0_1604_1_NOSTEAM",
+	"VER_1_0_1604_1_STEAM",
+	"VER_1_0_1604_1_NOSTEAM",
 
-    "VER_1_0_1737_0_STEAM",
-    "VER_1_0_1737_0_NOSTEAM",
+	"VER_1_0_1737_0_STEAM",
+	"VER_1_0_1737_0_NOSTEAM",
 
-    "VER_1_0_1737_6_STEAM",
-    "VER_1_0_1737_6_NOSTEAM",
+	"VER_1_0_1737_6_STEAM",
+	"VER_1_0_1737_6_NOSTEAM",
 
-    "VER_1_0_1868_0_STEAM",
-    "VER_1_0_1868_0_NOSTEAM",
+	"VER_1_0_1868_0_STEAM",
+	"VER_1_0_1868_0_NOSTEAM",
 
-    "VER_1_0_1868_1_STEAM",
-    "VER_1_0_1868_1_NOSTEAM",
+	"VER_1_0_1868_1_STEAM",
+	"VER_1_0_1868_1_NOSTEAM",
 
-    "VER_1_0_1868_4_EGS",
+	"VER_1_0_1868_4_EGS",
 
 	"VER_1_0_2060_0_STEAM",
 	"VER_1_0_2060_0_NOSTEAM",
@@ -101,6 +100,18 @@ static std::vector<std::string> GameVersionString = {
 
 	"VER_1_0_2189_0_STEAM",
 	"VER_1_0_2189_0_NOSTEAM",
+
+	"VER_1_0_2215_0_STEAM",
+	"VER_1_0_2215_0_NOSTEAM",
+
+	"VER_1_0_2245_0_STEAM",
+	"VER_1_0_2245_0_NOSTEAM"
+
+	"VER_1_0_2372_0_STEAM",
+	"VER_1_0_2372_0_NOSTEAM",
+
+	"VER_1_0_2545_0_STEAM",
+	"VER_1_0_2545_0_NOSTEAM",
 };
 
 int ScriptEngine::GetGameVersion()
@@ -191,13 +202,36 @@ int ScriptEngine::GetGameVersion()
 		return 63;
 	case 0xC1000000:	// 1.0.2189.0 NONSTEAM
 		return 64;
-#ifdef _DEBUG
+	case 0x1428D41:
+		return 65;
+	case 0x33450158:
+		return 66;
+	case 0xDE80000:
+		return 67;
+	case 0x448D48CA:
+		return 68;
+	case 0x1491:  // temp
+		return 69;
+	case 0x1490:
+		return 70;
+	case 0x14912: // temp
+		return 71;
+	case 0x178A4101:
+		return 72;
 	default:
+		if (codeSig == 0) {
+			if (*(DWORD*)((DWORD64)pModule + 0xB00000) == 0x7F58E3E8)
+				return 60;
+			else
+				return 62;
+		}
+		if (codeSig == 0x89605189) {
+			if (*(DWORD*)((DWORD64)pModule + 0x1433B08) == 0x245C8948)
+				return 6;
+			else
+				return 8;
+		}
 		return codeSig;
-#else
-	default:
-		return -1;
-#endif
 	}
 }
 
@@ -281,6 +315,8 @@ int ScriptEngine::GameVersionToSearchDepth(int version)
 		return 20;
 	case 54:
 	case 55:
+	case 56:
+	case 57:
 	case 58:
 		return 21;
 	case 59:
@@ -289,8 +325,19 @@ int ScriptEngine::GameVersionToSearchDepth(int version)
 	case 62:
 		return 22;
 	case 63:
+		return 22;
 	case 64:
+	case 65:
+	case 66:
+	case 67:
+	case 68:
 		return 23;
+	case 69:
+	case 70:
+		return 24;
+	case 71:
+	case 72:
+		return 25;
 
 	default:
 		return fullHashMapDepth - 1;

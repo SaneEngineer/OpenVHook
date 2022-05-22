@@ -108,7 +108,7 @@ bool ScriptEngine::Initialize() {
 	auto p_legalNotice = pattern("72 1F E8 ? ? ? ? 8B 0D").count(1).get(0).get<char>(0);
 	memset(p_legalNotice, 0x90, 2);
 
-	auto scrThreadCollectionPattern = pattern("48 8B C8 EB 03 48 8B CB 48 8B 05");
+	auto scrThreadCollectionPattern = pattern("48 8B C8 EB 03 49 8B CD 48 8B 05");
 
 	char * location = scrThreadCollectionPattern.count(1).get(0).get<char>(11);
 	if (location == nullptr) {
@@ -122,21 +122,22 @@ bool ScriptEngine::Initialize() {
 	activeThreadTlsOffset = *pattern("48 8B 04 D0 4A 8B 14 00 48 8B 01 F3 44 0F 2C 42 20").count(1).get(0).get<uint32_t>(-4);
 	LOG_DEBUG("activeThreadTlsOffset 0x%.8X", activeThreadTlsOffset);
 
-	auto scrThreadIdPattern = pattern("33 FF 48 85 C0 74 08 48 8B C8 E8");
+	auto scrThreadIdPattern = pattern("8B 15 ? ? ? ? 48 8B 05 ? ? ? ? FF C2 89 15 ? ? ? ? 48 8B 0C D8");
 
-	location = scrThreadIdPattern.count(1).get(0).get<char>(-9);
+	location = scrThreadIdPattern.count(1).get(0).get<char>(2);
 	if (location == nullptr) {
 
 		LOG_ERROR("Unable to find scrThreadId");
 		return false;
 	}
-	scrThreadId = get_address<uint32_t*>(location) - 2;
+	scrThreadId = get_address<uint32_t*>(location);
 	//scrThreadId = reinterpret_cast<decltype(scrThreadId)>(location + *(int32_t*)(location + 2) + 6);
 	LOG_DEBUG("scrThreadId\t\t 0x%p (0x%.8X)", scrThreadId, reinterpret_cast<uintptr_t>(scrThreadId) - executable.begin());
 
-	auto scrThreadCountPattern = pattern("FF 0D ? ? ? ? 48 8B F9");
+	auto scrThreadCountPattern = pattern("FF 0D ? ? ? ? 48 8B D9 75");
 
 	location = scrThreadCountPattern.get(0).get<char>(2);
+	//location = Utility::get_pattern<char>("FF 0D ? ? ? ? 48 8B D9 75", 2);
 	if (location == nullptr) {
 
 		LOG_ERROR("Unable to find scrThreadCount");
@@ -183,7 +184,7 @@ bool ScriptEngine::Initialize() {
 		return false;
 	}
 
-	auto gameStatePattern =	pattern("83 3D ? ? ? ? ? 8A D9 74 0A");
+	auto gameStatePattern = pattern("83 3D ? ? ? ? ? 75 17 8B 43 20 25");
 
 	location = gameStatePattern.count(1).get(0).get<char>(2);
 	if (location == nullptr) {

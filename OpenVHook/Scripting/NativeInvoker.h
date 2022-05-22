@@ -90,8 +90,8 @@ public:
 	}
 };
 
-#define fullHashMapCount 6354
-#define fullHashMapDepth 24
+#define fullHashMapCount 6472
+#define fullHashMapDepth 26
 
 extern uint64_t fullHashMap[fullHashMapCount][fullHashMapDepth];
 
