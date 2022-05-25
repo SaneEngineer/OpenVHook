@@ -33,6 +33,11 @@ static Vector2 windowSize = Vector2();
 Fn_IDXGISwapChain_Present g_orig_IDXGISwapChain_Present = nullptr;
 HRESULT WINAPI New_IDXGISwapChain_Present(IDXGISwapChain* chain, UINT syncInterval, UINT flags)
 {
+	if (flags & DXGI_PRESENT_TEST)
+	{
+		return g_orig_IDXGISwapChain_Present(chain, syncInterval, flags);
+	}
+
 	if (!g_D3DHook.m_IsResizing)
 	{
 		if (g_D3DHook.m_pSwapchain == nullptr)
