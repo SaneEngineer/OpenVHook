@@ -238,15 +238,15 @@ bool ScriptEngine::Initialize() {
 	activeThreadTlsOffset = *pattern("48 8B 04 D0 4A 8B 14 00 48 8B 01 F3 44 0F 2C 42 20").count(1).get(0).get<uint32_t>(-4);
 	LOG_DEBUG("activeThreadTlsOffset 0x%.8X", activeThreadTlsOffset);
 
-	auto scrThreadIdPattern = pattern("8B 15 ? ? ? ? 48 8B 05 ? ? ? ? FF C2 89 15 ? ? ? ? 48 8B 0C D8");
+	auto scrThreadIdPattern = pattern("E8 ? ? ? ? 48 8B CB 40 88 2D ? ? ? ? 48");
 
-	location = scrThreadIdPattern.count(1).get(0).get<char>(2);
+	location = scrThreadIdPattern.count(1).get(0).get<char>(11);
 	if (location == nullptr) {
 
 		LOG_ERROR("Unable to find scrThreadId");
 		return false;
 	}
-	scrThreadId = get_address<uint32_t*>(location);
+	scrThreadId = get_address<uint32_t*>(location) + 1;
 	//scrThreadId = reinterpret_cast<decltype(scrThreadId)>(location + *(int32_t*)(location + 2) + 6);
 	LOG_DEBUG("scrThreadId\t\t 0x%p (0x%.8X)", scrThreadId, reinterpret_cast<uintptr_t>(scrThreadId) - executable.begin());
 
