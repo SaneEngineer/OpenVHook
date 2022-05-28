@@ -598,43 +598,39 @@ int ScriptEngine::GetGameVersion()
 		return 38;
 	case 0x2C0EB25:
 		return 40;
-	case 0x8B484874:	// 1.0.1868.0 STEAM
+	case 0x8B484874:	
 		return 54;
-	case 0xA0C18148:    // 1.0.1868.4 EPIC
+	case 0xA0C18148:    
 		return 58;
-	case 0x02:			// Steam Placeholder
+	case 0x7738432F:			
 		return 59;
-	case 0x0:			// 1.0.2060.0 NONSTEAM
-		return 62;
-	case 59:			// 1.0.2060.1 STEAM Placeholder
+	case 0x3944F98B:			
 		return 61;
-	case 60:			// 1.0.2060.1 NONSTEAM
-		return 62;
-	case 61:			// 1.0.2189.0 STEAM Placeholder
+	case 0x126AE900:			
 		return 63;
-	case 0xC1000000:	// 1.0.2189.0 NONSTEAM
+	case 0xC1000000:	
 		return 64;
-	case 0x1428D41:
+	case 0x1428D41: 
 		return 65;
 	case 0x33450158:
 		return 66;
-	case 0xDE80000:
+	case 0xDE80000: 
 		return 67;
 	case 0x448D48CA:
 		return 68;
-	case 0x1491:  // temp
+	case 0x1491:  // steam placeholder
 		return 69;
 	case 0x1490:
 		return 70;
-	case 0x14912: // temp
+	case 0x14912: // steam placeholder
 		return 71;
 	case 0x178A4101:
 		return 72;
-	case 0x14913: // temp
+	case 0x14913: // steam placeholder
 		return 73;
-	case 0x14914: // temp
+	case 0x358B4C07:
 		return 74;
-	case 0x14915: // temp
+	case 0x663B4466:
 		return 75;
 	case 0x27B0B3E8:
 		return 76;
